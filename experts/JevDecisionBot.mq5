@@ -44,7 +44,7 @@ input string InpSessions    = "";                           // guard: sessions
 input string InpWhitelist   = "*";                          // guard: symbol whitelist
 input bool   InpConfirmMode = false;                        // guard: confirm mode
 input bool   InpDryRun      = true;                         // guard: dry run (default ON)
-input string InpSymbol      = "EURUSD";                     // default symbol
+input string InpSymbol      = "XAUUSD";                     // default symbol
 input string InpTimeframe   = "H1";                         // default timeframe
 input int    InpBarsCount   = 30;                           // bars for state
 

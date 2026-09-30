@@ -13,9 +13,9 @@
 #include <Json.mqh>
 
 //--- inputs
-input string InpApiKey  = "";                          // OpenAI API key
-input string InpBaseUrl = "https://api.openai.com/v1"; // base URL
-input string InpModel   = "gpt-4o-mini";               // model
+input string InpApiKey  = "100216";                    // OpenAI API key (local proxy)
+input string InpBaseUrl = "http://host.docker.internal:9936/v1"; // base URL (local proxy)
+input string InpModel   = "DeepSeek-V4-Flash-Official"; // model
 input int    InpTimeout = 30000;                       // timeout ms
 
 //+------------------------------------------------------------------+

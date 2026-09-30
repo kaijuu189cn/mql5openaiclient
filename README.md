@@ -65,6 +65,28 @@ MQL5/
 > MetaTrader 5 自带 MetaEditor64 命令行编译（0 错误 0 警告），
 > 生成 `.ex5` 后可直接挂载到图表运行。
 
+## 本地 OpenAI 兼容代理（开发测试用）
+
+本包默认配置已指向一个本地 OpenAI 兼容网关：
+
+- `base_url`：`http://host.docker.internal:9936/v1`
+- `api_key`：`100216`
+- `model`：`DeepSeek-V4-Flash-Official`（该网关支持多模型，见 `/v1/models`）
+
+该网关已用 curl 实测通过：`chat/completions`、**function calling**、
+多轮工具结果回传均与 OpenAI 协议一致（`choices[].message.tool_calls`）。
+
+**使用注意**：
+1. **URL 白名单**：MT5 菜单 `工具 -> 选项 -> EA 交易 -> 允许 WebRequest`
+   里需要添加 `http://host.docker.internal:9936`。
+   `host.docker.internal` 只在容器内解析到宿主机；在物理 Windows 上
+   改成宿主机实际 IP（如 `http://192.168.x.x:9936`）。
+2. **http 明文**：MT5 的 WebRequest 官方文档要求 https，但实际对
+   localhost/局域网 http 通常放行（以终端实测为准；若报 4014/连接失败，
+   优先确认白名单条目是否精确匹配 URL 前缀）。
+3. 改回 OpenAI 官方：把 `base_url` 改 `https://api.openai.com/v1`、
+   `api_key` 改 `sk-...`、`model` 改 `gpt-4o-mini` 等即可。
+
 ## JEV 决策版（OpenRouter / TypeSafe JEV）
 
 > **重要**：JEV（`typesafe/jev-1.13`）**不是聊天模型**，而是 TypeSafe 的
@@ -171,6 +193,9 @@ chat/completions 端点**（报错 "is a decisions model"），所以此版本
   已按 decisions 协议实现。
 
 ## 版本历史
+- v1.12 2026-10-01：接入本地 OpenAI 兼容代理
+  （`http://host.docker.internal:9936/v1`，key `100216`）；默认品种改
+  `XAUUSD`；curl 实测代理的 chat/function calling/多轮工具循环通过。
 - v1.11 2026-10-01：真机编译验证——webtop 容器内 MetaEditor64 编译
   全部 6 个 `.mq5` 通过（0 errors, 0 warnings）；修复 MT4→MQL5 差异：
   指标句柄化（iMA/iRSI/iMACD/iBands/iStochastic + CopyBuffer）、

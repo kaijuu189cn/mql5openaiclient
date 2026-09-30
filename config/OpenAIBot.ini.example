@@ -3,9 +3,14 @@
 # Lines starting with # or ; are comments.
 
 # --- OpenAI ---
-api_key       = sk-REPLACE_WITH_YOUR_KEY
-base_url      = https://api.openai.com/v1
-model         = gpt-4o-mini
+# Local OpenAI-compatible proxy (verified working with chat+tool calls):
+api_key       = 100216
+base_url      = http://host.docker.internal:9936/v1
+model         = DeepSeek-V4-Flash-Official
+# --- or direct OpenAI ---
+# api_key     = sk-REPLACE_WITH_YOUR_KEY
+# base_url    = https://api.openai.com/v1
+# model       = gpt-4o-mini
 max_tokens    = 2000
 poll_seconds  = 30
 

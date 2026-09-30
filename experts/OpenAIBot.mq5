@@ -30,9 +30,9 @@
 #include <Config.mqh>
 
 //--- inputs
-input string InpApiKey      = "";                     // OpenAI API key (sk-...)
-input string InpBaseUrl     = "https://api.openai.com/v1"; // API base URL
-input string InpModel       = "gpt-4o-mini";          // model
+input string InpApiKey      = "100216";               // OpenAI API key (local proxy)
+input string InpBaseUrl     = "http://host.docker.internal:9936/v1"; // API base URL (local proxy)
+input string InpModel       = "DeepSeek-V4-Flash-Official"; // model (local proxy)
 input double InpTemperature = 0.2;                    // temperature
 input int    InpMaxTokens   = 2000;                   // max tokens per reply
 input int    InpMaxToolRounds = 6;                    // max tool-call rounds
@@ -43,8 +43,8 @@ input int    InpMagic       = 20261030;               // EA magic number
 
 //--- runtime config (populated from inputs, overridable by ini)
 string g_apiKey   = "";
-string g_baseUrl  = "https://api.openai.com/v1";
-string g_model    = "gpt-4o-mini";
+string g_baseUrl  = "http://host.docker.internal:9936/v1";
+string g_model    = "DeepSeek-V4-Flash-Official";
 int    g_maxTokens= 2000;
 int    g_pollSeconds = 30;
 int    g_magic    = 20261030;
@@ -56,7 +56,7 @@ input string InpWhitelist   = "*";                    // symbol whitelist
 input bool   InpConfirmMode = false;                  // require local confirmation
 input bool   InpDryRun      = false;                  // simulate trades only
 input bool   InpUseInbox    = true;                   // poll inbox.txt
-input string InpSymbol      = "EURUSD";               // default symbol
+input string InpSymbol      = "XAUUSD";               // default symbol
 input string InpTimeframe   = "H1";                   // default timeframe
 input int    InpBarsCount   = 60;                     // bars for context
 input int    InpMaxBarText  = 1200;                   // max bar-text length
