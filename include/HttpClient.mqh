@@ -31,13 +31,20 @@ public:
    string   LastError(void) const { return m_lastError; }
 
    //--- UTF-8 encode a string into a char array (WebRequest body type)
+   // NOTE: StringToCharArray with CP_UTF8 (65001) prepends a UTF-8 BOM
+   // (EF BB BF); strip it so the JSON body starts with '{'.
    static int Utf8Encode(const string text,char &out[])
      {
       uchar u[];
       int n=StringToCharArray(text,u,0,WHOLE_ARRAY,65001);   // CP_UTF8
       int len=(n>0)?n-1:0;                                    // drop terminator
+      int skip=0;
+      if(len>=3 && u[0]==0xEF && u[1]==0xBB && u[2]==0xBF)
+         skip=3;                                              // strip UTF-8 BOM
+      len-=skip;
+      if(len<0) len=0;
       ArrayResize(out,len);
-      for(int i=0;i<len;i++) out[i]=(char)u[i];
+      for(int i=0;i<len;i++) out[i]=(char)u[i+skip];
       return len;
      }
 
