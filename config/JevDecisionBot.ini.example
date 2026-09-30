@@ -1,0 +1,34 @@
+# JevDecisionBot configuration for MT5
+# Place in: MQL5\Files\OpenAIBot\JevDecisionBot.ini
+# Lines starting with # or ; are comments.
+#
+# Jev is a DECISION model (not a chat model). It answers typed
+# questions (choice/noul/score) with probabilities. This EA uses it
+# as a decision gate for trading signals.
+#
+# Requirements:
+#   * OpenRouter API key (sk-or-...)
+#   * whitelist https://openrouter.ai in MT5 WebRequest settings
+
+# --- OpenRouter / Jev ---
+api_key       = sk-or-REPLACE_WITH_YOUR_OPENROUTER_KEY
+base_url      = https://openrouter.ai
+model         = typesafe/jev-1.13
+
+# --- decision gate ---
+poll_seconds  = 60        # decision interval (seconds)
+min_conf      = 0.60      # minimum confidence to act
+min_prob      = 0.55      # minimum option probability to act
+# signal mode: 1 = read candidate from inbox.txt
+#              2 = local momentum rule generates candidates
+signal_mode   = 1
+
+# --- risk guardrails ---
+magic         = 20261031
+max_lot       = 0.50
+max_positions = 3
+daily_loss    = 200
+# sessions     = 09:00-17:00
+# whitelist   = EURUSD,GBPUSD,XAUUSD
+confirm_mode  = false
+dry_run       = true

@@ -1,0 +1,23 @@
+# OpenAI Bot JEV edition configuration for MT5
+# Place in: MQL5\Files\OpenAIBot\OpenAIBot_JEV.ini
+# Lines starting with # or ; are comments.
+#
+# JEV is served by OpenRouter. Use your OpenRouter API key (sk-or-...),
+# and whitelist https://openrouter.ai in MT5 WebRequest settings.
+
+# --- OpenRouter / JEV ---
+api_key       = sk-or-REPLACE_WITH_YOUR_OPENROUTER_KEY
+base_url      = https://openrouter.ai/api/v1
+model         = typesafe/jev-1.13
+max_tokens    = 1000
+poll_seconds  = 45
+
+# --- risk guardrails ---
+magic         = 20261030
+max_lot       = 0.50
+max_positions = 3
+daily_loss    = 200
+# sessions     = 09:00-17:00            # empty = 24/7
+# whitelist   = EURUSD,GBPUSD,XAUUSD    # * = all
+confirm_mode  = false
+dry_run       = true

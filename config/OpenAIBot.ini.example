@@ -1,0 +1,20 @@
+# OpenAI Bot configuration for MT5
+# Place in: MQL5\Files\OpenAIBot.ini
+# Lines starting with # or ; are comments.
+
+# --- OpenAI ---
+api_key       = sk-REPLACE_WITH_YOUR_KEY
+base_url      = https://api.openai.com/v1
+model         = gpt-4o-mini
+max_tokens    = 2000
+poll_seconds  = 30
+
+# --- risk guardrails ---
+magic         = 20261030
+max_lot       = 0.50
+max_positions = 3
+daily_loss    = 200
+# sessions     = 09:00-17:00            # empty = 24/7
+# whitelist   = EURUSD,GBPUSD,XAUUSD    # * = all
+confirm_mode  = false
+dry_run       = true

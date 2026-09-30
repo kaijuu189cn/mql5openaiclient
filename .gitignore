@@ -1,0 +1,20 @@
+# --- MQL5 build artifacts ---
+*.ex4
+*.ex5
+*.dll
+
+# --- runtime logs / trade files (never commit) ---
+*.log
+# note: prompt files are committed, so no blanket *.txt ignore
+
+# --- sensitive: never commit real API keys ---
+# real ini files are ignored; .ini.example templates are kept
+*.ini
+!*.ini.example
+
+# --- system ---
+.DS_Store
+Thumbs.db
+
+# --- archive of itself ---
+*.zip
