@@ -96,10 +96,11 @@ public:
    string LastDetail(void) const { return m_lastDetail; }
 
    //=== Market data tools ==========================================
-   string ToolSymbolInfo(const string symbol);
-   string ToolRates(const string symbol,const string tf,int count);
-   string ToolTicker(const string symbol);
-   string ToolIndicators(const string symbol,const string tf,int count);
+   string ResolveSymbol(const string symbol);   // exact or suffix-tolerant
+   string ToolSymbolInfo(string symbol);
+   string ToolRates(string symbol,const string tf,int count);
+   string ToolTicker(string symbol);
+   string ToolIndicators(string symbol,const string tf,int count);
    string ToolSymbolsList(void);
 
    //=== Account tools ==============================================
@@ -305,9 +306,40 @@ EToolResult CMT5Toolbox::GuardManagePosition(const string symbol,const long tick
 //+------------------------------------------------------------------+
 //| Market data tools                                                |
 //+------------------------------------------------------------------+
-string CMT5Toolbox::ToolSymbolInfo(const string symbol)
+//+------------------------------------------------------------------+
+//| Resolve a user/model supplied symbol to a real broker symbol.    |
+//| Brokers often decorate names (XAUUSD -> XAUUSDm / XAUUSD.a ...). |
+//+------------------------------------------------------------------+
+string CMT5Toolbox::ResolveSymbol(const string symbol)
+  {
+   if(symbol=="") return symbol;
+   if(SymbolInfoInteger(symbol,SYMBOL_VISIBLE)) return symbol;   // exact
+   string want=symbol;
+   StringToUpper(want);
+   string best="";
+   int total=SymbolsTotal(false);
+   for(int i=0;i<total;i++)
+     {
+      string nm=SymbolName(i,false);
+      string up=nm;
+      StringToUpper(up);
+      if(up==want){ best=nm; break; }
+      if(StringFind(up,want)==0)                 // same root, decorated
+         if(best=="" || StringLen(nm)<StringLen(best))
+            best=nm;
+     }
+   if(best!="")
+     {
+      SymbolSelect(best,true);                   // make data available
+      return best;
+     }
+   return symbol;
+  }
+
+string CMT5Toolbox::ToolSymbolInfo(string symbol)
   {
    m_lastTool="symbol_info";
+   symbol=ResolveSymbol(symbol);
    if(!SymbolInfoInteger(symbol,SYMBOL_VISIBLE))
      return m_lastTool+"|ERROR|symbol not found: "+symbol;
    string r=m_lastTool+"|OK";
@@ -332,20 +364,24 @@ string CMT5Toolbox::ToolSymbolInfo(const string symbol)
    return r;
   }
 
-string CMT5Toolbox::ToolRates(const string symbol,const string tf,int count)
+string CMT5Toolbox::ToolRates(string symbol,const string tf,int count)
   {
    m_lastTool="rates";
+   symbol=ResolveSymbol(symbol);
    ENUM_TIMEFRAMES t=StrToTF(tf);
    if(t==PERIOD_CURRENT) t=PERIOD_M1;
-   if(count<=0 || count>1000) count=100;
+   if(count<=0) count=30;
+   if(count>120) count=120;                 // keep the text small
    MqlRates rt[];
    if(!CopyRates(symbol,t,0,count,rt))
      return m_lastTool+"|ERROR|CopyRates failed: "+IntegerToString(GetLastError());
    int n=ArraySize(rt);
    if(n<=0) return m_lastTool+"|ERROR|no bars";
    int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
-   string r=m_lastTool+"|OK|symbol="+symbol+"|tf="+tf+"|count="+IntegerToString(n)+"\n";
-   for(int i=n-1;i>=0;i--)
+   int show=(n<30)?n:30;                    // print at most 30 bars
+   string r=m_lastTool+"|OK|symbol="+symbol+"|tf="+tf+"|count="+IntegerToString(n)+
+            "|showing="+IntegerToString(show)+"\n";
+   for(int i=n-1;i>=n-show;i--)
      {
       r+=TimeToString(rt[i].time,TIME_DATE|TIME_MINUTES)+" O="+
          DoubleToString(rt[i].open,digits)+" H="+
@@ -354,13 +390,18 @@ string CMT5Toolbox::ToolRates(const string symbol,const string tf,int count)
          DoubleToString(rt[i].close,digits)+" V="+
          DoubleToString((double)rt[i].tick_volume,0)+"\n";
      }
+   if(n>show)
+      r+="...("+IntegerToString(n-show)+" older bars omitted)\n";
+   if(StringLen(r)>3000)
+      r=StringSubstr(r,0,3000)+"\n...[truncated]";
    AddLog(ToolHeader()+"queried "+symbol+" "+tf+" x"+IntegerToString(n));
    return r;
   }
 
-string CMT5Toolbox::ToolTicker(const string symbol)
+string CMT5Toolbox::ToolTicker(string symbol)
   {
    m_lastTool="ticker";
+   symbol=ResolveSymbol(symbol);
    if(!SymbolInfoInteger(symbol,SYMBOL_VISIBLE))
      return m_lastTool+"|ERROR|symbol not found: "+symbol;
    double bid=SymbolInfoDouble(symbol,SYMBOL_BID);
@@ -370,9 +411,10 @@ string CMT5Toolbox::ToolTicker(const string symbol)
           "|ask="+DoubleToString(ask,digits);
   }
 
-string CMT5Toolbox::ToolIndicators(const string symbol,const string tf,int count)
+string CMT5Toolbox::ToolIndicators(string symbol,const string tf,int count)
   {
    m_lastTool="indicators";
+   symbol=ResolveSymbol(symbol);
    ENUM_TIMEFRAMES t=StrToTF(tf);
    if(t==PERIOD_CURRENT) t=PERIOD_M1;
    if(count<=0 || count>1000) count=50;
@@ -389,7 +431,7 @@ string CMT5Toolbox::ToolIndicators(const string symbol,const string tf,int count
    int hRSI=iRSI(symbol,t,14,PRICE_CLOSE);
    int hATR=iATR(symbol,t,14);
    int hMACD=iMACD(symbol,t,12,26,9,PRICE_CLOSE);
-   int hBB=iBands(symbol,t,20,2,0,PRICE_CLOSE);
+   int hBB=iBands(symbol,t,20,0,2.0,PRICE_CLOSE);
    int hSt=iStochastic(symbol,t,5,3,3,MODE_SMA,STO_LOWHIGH);
 
    double b0[1], b1[1], b2[1];

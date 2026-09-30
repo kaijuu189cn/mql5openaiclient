@@ -75,6 +75,7 @@ public:
 
    //--- state getters
    string   LastError(void) const       { return m_lastError; }
+   string   RawResponse(void) const     { return m_rawResp; }   // last raw body
    bool     HasFinalAnswer(void) const  { return m_finalAnswer; }
    string   Answer(void) const          { return m_answer; }
    int      PendingCount(void) const;
@@ -82,6 +83,7 @@ public:
    string   PendingCallName(const int i) const;
    string   PendingCallArgs(const int i) const;
    string   PendingCallsJson(void) const { return m_pendingCalls; }
+   void     DisableTools(void)          { m_toolsJson="[]"; } // force an answer
   };
 
 //+------------------------------------------------------------------+
@@ -297,14 +299,26 @@ bool COpenAIClient::SendRequest(void)
       return false;
      }
 
+   // "Connection: close" avoids reusing a keep-alive socket the proxy may
+   // already have dropped while we were idle between polls; such a stale
+   // reuse surfaces as a bogus status code with an empty body.
    string headers="Authorization: Bearer "+m_apiKey+
-                  "\r\nContent-Type: application/json";
+                   "\r\nContent-Type: application/json"+
+                   "\r\nConnection: close";
 
    string url=m_baseUrl+"/chat/completions";
    string respHeaders="";
    m_rawResp="";
    ResetLastError();
-   int code=m_http.PostJson(url,headers,body,30000,m_rawResp,respHeaders);
+   int code=m_http.PostJson(url,headers,body,60000,m_rawResp,respHeaders);
+   // one transparent retry on an empty-bodied failure (stale socket / hiccup)
+   if(code!=200 && StringLen(m_rawResp)==0)
+     {
+      Sleep(1200);
+      m_rawResp="";
+      ResetLastError();
+      code=m_http.PostJson(url,headers,body,60000,m_rawResp,respHeaders);
+     }
    if(code<0)
      {
       m_lastError=m_http.LastError();
@@ -312,7 +326,9 @@ bool COpenAIClient::SendRequest(void)
      }
    if(code!=200)
      {
-      m_lastError=StringFormat("HTTP %d: %s",code,m_rawResp);
+      // include the request size: gateways often reject oversized contexts
+      m_lastError=StringFormat("HTTP %d (request %d bytes): %s",
+                               code,StringLen(body),m_rawResp);
       return false;
      }
    m_round++;

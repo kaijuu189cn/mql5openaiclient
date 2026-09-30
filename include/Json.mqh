@@ -393,6 +393,21 @@ bool CJson::Resolve(const string path,int &node) const
            }
          if(!found) return false;
          node=child;
+         // "key[0]": after picking the member, step into its element.
+         // (Without this, paths like choices[0].message never resolve.)
+         if(idx>=0)
+           {
+            if(m_n[node].type!=J_ARRAY) return false;
+            int e=m_n[node].first;
+            int k=0;
+            while(e>=0)
+              {
+               if(k==idx){ node=e; break; }
+               e=m_n[e].next;
+               k++;
+              }
+            if(e<0) return false;
+           }
         }
       else if(t==J_ARRAY)
         {

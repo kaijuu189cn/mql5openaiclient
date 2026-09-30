@@ -35,7 +35,7 @@ input string InpBaseUrl     = "http://host.docker.internal:9936/v1"; // API base
 input string InpModel       = "DeepSeek-V4-Flash-Official"; // model (local proxy)
 input double InpTemperature = 0.2;                    // temperature
 input int    InpMaxTokens   = 2000;                   // max tokens per reply
-input int    InpMaxToolRounds = 6;                    // max tool-call rounds
+input int    InpMaxToolRounds = 8;                    // max tool-call rounds
 input int    InpPollSeconds = 30;                     // poll interval (seconds)
 input string InpConfigFile  = "OpenAIBot.ini";        // config file (Files\\)
 input string InpSystemPromptFile = "system_prompt.txt"; // prompt file (Files\\)
@@ -54,7 +54,7 @@ input double InpDailyLoss   = 1000.0;                 // daily loss limit (curre
 input string InpSessions    = "";                     // sessions "HH:MM-HH:MM,..."
 input string InpWhitelist   = "*";                    // symbol whitelist
 input bool   InpConfirmMode = false;                  // require local confirmation
-input bool   InpDryRun      = false;                  // simulate trades only
+input bool   InpDryRun      = true;                   // simulate trades only (safe default)
 input bool   InpUseInbox    = true;                   // poll inbox.txt
 input string InpSymbol      = "XAUUSD";               // default symbol
 input string InpTimeframe   = "H1";                   // default timeframe
@@ -124,10 +124,10 @@ int OnInit(void)
    FolderCreate("OpenAIBot");
 
    g_workDir=TerminalInfoString(TERMINAL_DATA_PATH)+"\\MQL5\\Files\\";
-   g_inboxFile=SafePath("OpenAIBot\\inbox.txt");
-   g_outboxFile=SafePath("OpenAIBot\\outbox.txt");
-   g_confirmFile=SafePath("OpenAIBot\\confirm.txt");
-   g_logFile=SafePath("OpenAIBot\\log.txt");
+   g_inboxFile=SafePath("inbox.txt");
+   g_outboxFile=SafePath("outbox.txt");
+   g_confirmFile=SafePath("confirm.txt");
+   g_logFile=SafePath("log.txt");
 
    // default guard
    g_guard.tradingEnabled=true;
@@ -288,7 +288,18 @@ void StartRequest(void)
       return;
      }
 
-   // round cap reached
+   // round cap reached: ask once more with tools switched off so the
+   // model has to summarise what it already gathered.
+   g_openai.DisableTools();
+   if(g_openai.SendRequest() && g_openai.HasFinalAnswer())
+     {
+      g_lastAnswer=g_openai.Answer();
+      g_state=AG_ANSWERED;
+      g_lastActivity=TimeCurrent();
+      WriteOutbox("ASSISTANT (tool limit reached): "+g_lastAnswer);
+      Print("OpenAIBot: answer after tool limit: ",g_lastAnswer);
+      return;
+     }
    g_lastError="tool-call round limit reached ("+IntegerToString(InpMaxToolRounds)+")";
    g_state=AG_ERROR;
    g_lastActivity=TimeCurrent();
@@ -306,6 +317,9 @@ string ProcessToolCalls(void)
       string name=g_pendingNames[i];
       string args=g_pendingArgs[i];
       string out=DispatchTool(name,args);
+      // keep a single tool answer from blowing up the context window
+      if(StringLen(out)>3000)
+         out=StringSubstr(out,0,3000)+"\n...[result truncated]";
       string item="{\"role\":\"tool\",\"tool_call_id\":"+CJson::Quote(g_pendingIds[i])+
                   ",\"content\":"+CJson::Quote(out)+"}";
       if(i>0) results+=",";
@@ -440,7 +454,7 @@ string TimeStr(const datetime t)
 bool LoadConfigAndPrompt(void)
   {
    bool ok=false;
-   string cfgPath=SafePath(InpConfigFile);
+   string cfgPath=InpConfigFile;
    if(g_cfg.Load(cfgPath))
      {
       if(g_cfg.Has("api_key") && g_cfg.GetString("api_key")!="")

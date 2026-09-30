@@ -391,7 +391,7 @@ string TimeStr(const datetime t)
 bool LoadConfigAndPrompt(void)
   {
    bool ok=false;
-   string cfgPath="OpenAIBot\\"+InpConfigFile;
+   string cfgPath=InpConfigFile;
    if(g_cfg.Load(cfgPath))
      {
       if(g_cfg.Has("api_key") && g_cfg.GetString("api_key")!="")
