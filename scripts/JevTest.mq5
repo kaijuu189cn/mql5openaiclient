@@ -9,8 +9,8 @@
 #property version   "1.00"
 #property strict
 
-#include "..\include\JevClient.mqh"
-#include "..\include\Json.mqh"
+#include <JevClient.mqh>
+#include <Json.mqh>
 
 input string InpApiKey  = "";                     // OpenRouter API key (sk-or-...)
 input string InpBaseUrl = "https://openrouter.ai"; // base URL

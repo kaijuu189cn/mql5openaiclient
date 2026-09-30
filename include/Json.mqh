@@ -523,8 +523,8 @@ string CJson::Escape(const string s)
       else if(c=='\n') r+="\\n";
       else if(c=='\r') r+="\\r";
       else if(c=='\t') r+="\\t";
-      else if(c=='\b') r+="\\b";
-      else if(c=='\f') r+="\\f";
+      else if(c==8)    r+="\\b";    // backspace (MQL5 has no \b escape)
+      else if(c==12)   r+="\\f";    // form feed (MQL5 has no \f escape)
       else if(c<0x20)  r+=StringFormat("\\u%04x",(int)c);
       else             r+=ShortToString(c);
      }

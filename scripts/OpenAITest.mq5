@@ -9,8 +9,8 @@
 #property version   "1.00"
 #property strict
 
-#include "..\include\HttpClient.mqh"
-#include "..\include\Json.mqh"
+#include <HttpClient.mqh>
+#include <Json.mqh>
 
 //--- inputs
 input string InpApiKey  = "";                          // OpenAI API key

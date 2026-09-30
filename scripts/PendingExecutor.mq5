@@ -14,8 +14,8 @@
 #property version   "1.00"
 #property strict
 
-#include "..\include\MT5Toolbox.mqh"
-#include "..\include\Config.mqh"
+#include <MT5Toolbox.mqh>
+#include <Config.mqh>
 
 input string InpCommand    = "";      // command line, e.g. "open|EURUSD|0|0.1|200|400|ai"
 input string InpConfirmFile= "OpenAIBot\\confirm.txt"; // confirm file

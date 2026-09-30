@@ -24,9 +24,9 @@
 #property copyright "MQL5-OpenAI"
 #property version   "1.20"
 
-#include "..\include\JevClient.mqh"
-#include "..\include\MT5Toolbox.mqh"
-#include "..\include\Config.mqh"
+#include <JevClient.mqh>
+#include <MT5Toolbox.mqh>
+#include <Config.mqh>
 
 //--- inputs
 input string InpApiKey      = "";                          // OpenRouter API key (sk-or-...)
@@ -237,7 +237,10 @@ bool ReadInboxSignal(string &sym,int &dir,double &lot)
    // format: open|SYMBOL|BUY|LOT
    if(n<4) return false;
    sym=parts[1];
-   dir=(StringToUpper(parts[2])=="BUY")?0:1;
+   string sdir=parts[2];
+   StringToUpper(sdir);
+   dir=0;
+   if(sdir!="BUY") dir=1;
    lot=StringToDouble(parts[3]);
    return (sym!="" && lot>0);
   }
@@ -246,9 +249,19 @@ bool ReadInboxSignal(string &sym,int &dir,double &lot)
 string DoLocalSignal(string &sym,int &dir,double &lot)
   {
    sym=InpSymbol;
-   double rsi=iRSI(sym,PERIOD_H1,14,PRICE_CLOSE,0);
+   // MQL5: indicator functions return handles; use CopyBuffer
+   double rsi=0;
+   int hRSI=iRSI(sym,PERIOD_H1,14,PRICE_CLOSE);
+   double b0[1];
+   if(hRSI>=0 && CopyBuffer(hRSI,0,0,1,b0)==1) rsi=b0[0];
+   if(hRSI>=0) IndicatorRelease(hRSI);
+
+   double ma20=0;
+   int hMA=iMA(sym,PERIOD_H1,20,0,MODE_SMA,PRICE_CLOSE);
+   if(hMA>=0 && CopyBuffer(hMA,0,0,1,b0)==1) ma20=b0[0];
+   if(hMA>=0) IndicatorRelease(hMA);
+
    double close=SymbolInfoDouble(sym,SYMBOL_BID);
-   double ma20=iMA(sym,PERIOD_H1,20,0,MODE_SMA,PRICE_CLOSE,0);
    if(rsi<30 && close>ma20)
      {
       dir=0; lot=0.1;          // oversold bounce

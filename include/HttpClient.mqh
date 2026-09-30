@@ -42,7 +42,7 @@ public:
      }
 
    //--- decode a WebRequest char[] result back to a string (UTF-8)
-   static string Utf8Decode(const char in[],const int len)
+   static string Utf8Decode(char &in[],const int len)
      {
       if(len<=0) return "";
       uchar u[];

@@ -97,9 +97,9 @@ public:
 
    //=== Market data tools ==========================================
    string ToolSymbolInfo(const string symbol);
-   string ToolRates(const string symbol,const string tf,const int count);
+   string ToolRates(const string symbol,const string tf,int count);
    string ToolTicker(const string symbol);
-   string ToolIndicators(const string symbol,const string tf,const int count);
+   string ToolIndicators(const string symbol,const string tf,int count);
    string ToolSymbolsList(void);
 
    //=== Account tools ==============================================
@@ -232,7 +232,7 @@ ENUM_ORDER_TYPE_FILLING CMT5Toolbox::FillingForSymbol(const string symbol) const
 
 double CMT5Toolbox::MinStopDistancePoints(const string symbol) const
   {
-   double level=SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
+   double level=(double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
    if(level<0) level=0;
    return level;
   }
@@ -332,7 +332,7 @@ string CMT5Toolbox::ToolSymbolInfo(const string symbol)
    return r;
   }
 
-string CMT5Toolbox::ToolRates(const string symbol,const string tf,const int count)
+string CMT5Toolbox::ToolRates(const string symbol,const string tf,int count)
   {
    m_lastTool="rates";
    ENUM_TIMEFRAMES t=StrToTF(tf);
@@ -370,7 +370,7 @@ string CMT5Toolbox::ToolTicker(const string symbol)
           "|ask="+DoubleToString(ask,digits);
   }
 
-string CMT5Toolbox::ToolIndicators(const string symbol,const string tf,const int count)
+string CMT5Toolbox::ToolIndicators(const string symbol,const string tf,int count)
   {
    m_lastTool="indicators";
    ENUM_TIMEFRAMES t=StrToTF(tf);
@@ -380,17 +380,47 @@ string CMT5Toolbox::ToolIndicators(const string symbol,const string tf,const int
      return m_lastTool+"|ERROR|symbol not found: "+symbol;
 
    int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
-   double ma=iMA(symbol,t,14,0,MODE_SMA,PRICE_CLOSE,0);
-   double rsi=iRSI(symbol,t,14,PRICE_CLOSE,0);
-   double atr=iATR(symbol,t,14,0);
-   double macd_main=iMACD(symbol,t,12,26,9,PRICE_CLOSE,MODE_MAIN,0);
-   double macd_sig=iMACD(symbol,t,12,26,9,PRICE_CLOSE,MODE_SIGNAL,0);
-   double macd_hist=macd_main-macd_sig;
-   double bb_mid=iBands(symbol,t,20,2,0,PRICE_CLOSE,MODE_MAIN,0);
-   double bb_up=iBands(symbol,t,20,2,0,PRICE_CLOSE,MODE_UPPER,0);
-   double bb_lo=iBands(symbol,t,20,2,0,PRICE_CLOSE,MODE_LOWER,0);
-   double st_k=iStochastic(symbol,t,5,3,3,MODE_SMA,0,MODE_MAIN,0);
-   double st_d=iStochastic(symbol,t,5,3,3,MODE_SMA,0,MODE_SIGNAL,0);
+
+   // MQL5: indicator functions return HANDLES; values come from CopyBuffer.
+   double ma=0, rsi=0, atr=0, macd_main=0, macd_sig=0, macd_hist=0;
+   double bb_mid=0, bb_up=0, bb_lo=0, st_k=0, st_d=0;
+
+   int hMA=iMA(symbol,t,14,0,MODE_SMA,PRICE_CLOSE);
+   int hRSI=iRSI(symbol,t,14,PRICE_CLOSE);
+   int hATR=iATR(symbol,t,14);
+   int hMACD=iMACD(symbol,t,12,26,9,PRICE_CLOSE);
+   int hBB=iBands(symbol,t,20,2,0,PRICE_CLOSE);
+   int hSt=iStochastic(symbol,t,5,3,3,MODE_SMA,STO_LOWHIGH);
+
+   double b0[1], b1[1], b2[1];
+   if(hMA>=0 && CopyBuffer(hMA,0,0,1,b0)==1) ma=b0[0];
+   if(hRSI>=0 && CopyBuffer(hRSI,0,0,1,b0)==1) rsi=b0[0];
+   if(hATR>=0 && CopyBuffer(hATR,0,0,1,b0)==1) atr=b0[0];
+   if(hMACD>=0)
+     {
+      if(CopyBuffer(hMACD,0,0,1,b0)==1) macd_main=b0[0];
+      if(CopyBuffer(hMACD,1,0,1,b1)==1) macd_sig=b1[0];
+      macd_hist=macd_main-macd_sig;
+     }
+   if(hBB>=0)
+     {
+      if(CopyBuffer(hBB,0,0,1,b0)==1) bb_mid=b0[0];
+      if(CopyBuffer(hBB,1,0,1,b1)==1) bb_up=b1[0];
+      if(CopyBuffer(hBB,2,0,1,b2)==1) bb_lo=b2[0];
+     }
+   if(hSt>=0)
+     {
+      if(CopyBuffer(hSt,0,0,1,b0)==1) st_k=b0[0];
+      if(CopyBuffer(hSt,1,0,1,b1)==1) st_d=b1[0];
+     }
+
+   // release handles
+   if(hMA>=0) IndicatorRelease(hMA);
+   if(hRSI>=0) IndicatorRelease(hRSI);
+   if(hATR>=0) IndicatorRelease(hATR);
+   if(hMACD>=0) IndicatorRelease(hMACD);
+   if(hBB>=0) IndicatorRelease(hBB);
+   if(hSt>=0) IndicatorRelease(hSt);
 
    string r=m_lastTool+"|OK|symbol="+symbol+"|tf="+tf;
    r+="|MA14="+DoubleToString(ma,digits);
@@ -492,9 +522,7 @@ string CMT5Toolbox::ToolHistoryToday(void)
       ulong d=HistoryDealGetTicket(i);
       if(HistoryDealGetInteger(d,DEAL_MAGIC)!=(long)m_g.magic) continue;
       long type=HistoryDealGetInteger(d,DEAL_TYPE);
-      string ts=(type==DEAL_TYPE_BUY)?"BUY":(type==DEAL_TYPE_SELL)?"SELL":
-                (type==DEAL_TYPE_BUY_LIMIT)?"BUY_LIMIT":(type==DEAL_TYPE_SELL_LIMIT)?"SELL_LIMIT":
-                (type==DEAL_TYPE_BUY_STOP)?"BUY_STOP":(type==DEAL_TYPE_SELL_STOP)?"SELL_STOP":"OTHER";
+      string ts=(type==DEAL_TYPE_BUY)?"BUY":(type==DEAL_TYPE_SELL)?"SELL":"OTHER";
       double profit=HistoryDealGetDouble(d,DEAL_PROFIT)+
                     HistoryDealGetDouble(d,DEAL_SWAP)+
                     HistoryDealGetDouble(d,DEAL_COMMISSION);
@@ -576,8 +604,10 @@ string CMT5Toolbox::ToolOpenOrder(const string symbol,const int dir,const double
       return m_lastTool+"|ERROR|cannot write confirm file";
      }
 
-   MqlTradeRequest req={0};
-   MqlTradeResult res={0};
+   MqlTradeRequest req;
+   ZeroMemory(req);
+   MqlTradeResult res;
+   ZeroMemory(res);
    req.action=TRADE_ACTION_DEAL;
    req.symbol=symbol;
    req.volume=vol;
@@ -647,8 +677,10 @@ string CMT5Toolbox::ToolClosePosition(const string symbol,const long ticket,cons
       return m_lastTool+"|ERROR|cannot write confirm file";
      }
 
-   MqlTradeRequest req={0};
-   MqlTradeResult res={0};
+   MqlTradeRequest req;
+   ZeroMemory(req);
+   MqlTradeResult res;
+   ZeroMemory(res);
    req.action=TRADE_ACTION_DEAL;
    req.symbol=sym;
    req.volume=vol;
@@ -724,8 +756,10 @@ string CMT5Toolbox::ToolModifyPosition(const long ticket,const double slPoints,c
    if(slPoints>=0) sl=(ptype==POSITION_TYPE_BUY)?open-slPoints*point:open+slPoints*point;
    if(tpPoints>=0) tp=(ptype==POSITION_TYPE_BUY)?open+tpPoints*point:open-tpPoints*point;
 
-   MqlTradeRequest req={0};
-   MqlTradeResult res={0};
+   MqlTradeRequest req;
+   ZeroMemory(req);
+   MqlTradeResult res;
+   ZeroMemory(res);
    req.action=TRADE_ACTION_SLTP;
    req.symbol=sym;
    req.position=ticket;
@@ -770,8 +804,10 @@ string CMT5Toolbox::ToolTrailingStop(const long ticket,const double trailPoints)
    if(ptype==POSITION_TYPE_BUY && oldSL>0 && newSL<oldSL) newSL=oldSL;
    if(ptype==POSITION_TYPE_SELL && oldSL>0 && newSL>oldSL) newSL=oldSL;
 
-   MqlTradeRequest req={0};
-   MqlTradeResult res={0};
+   MqlTradeRequest req;
+   ZeroMemory(req);
+   MqlTradeResult res;
+   ZeroMemory(res);
    req.action=TRADE_ACTION_SLTP;
    req.symbol=sym;
    req.position=ticket;
@@ -803,8 +839,10 @@ string CMT5Toolbox::ToolDeletePending(const string symbol,const long ticket)
    if(OrderGetInteger(ORDER_MAGIC)!=(long)m_g.magic)
      return m_lastTool+"|DENIED|order has different magic (R6)";
 
-   MqlTradeRequest req={0};
-   MqlTradeResult res={0};
+   MqlTradeRequest req;
+   ZeroMemory(req);
+   MqlTradeResult res;
+   ZeroMemory(res);
    req.action=TRADE_ACTION_REMOVE;
    req.order=ticket;
 

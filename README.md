@@ -43,19 +43,27 @@ MQL5/
 
 ## 三步启动
 
-1. **放文件**：按上表把 `Experts/`、`Scripts/`、`Include/`、`Files/` 内容
-   复制进你的 MT5 `MQL5` 目录（Windows 下路径类似
-   `C:\Users\<你>\AppData\Roaming\MetaQuotes\Terminal\<ID>\MQL5\`）。
+1. **放文件**：按上表把 `Experts/`、`Scripts/`、`Files/` 内容复制进你的
+   MT5 `MQL5` 目录（Windows 下路径类似
+   `C:\Users\<你>\AppData\Roaming\MetaQuotes\Terminal\<ID>\MQL5\`），
+   **并把 `Include/` 里的 7 个 `.mqh` 直接放进 `MQL5\Include\` 根目录**
+   （本包所有 EA/脚本用 `#include <X.mqh>` 尖括号形式，MetaEditor 只从
+   `MQL5\Include\` 根解析）。
 2. **开放 URL + 填 Key**：
    - MT5 菜单 `工具 -> 选项 -> EA 交易 -> 勾选"允许 WebRequest 列表中的 URL"`
      → 添加 `https://api.openai.com`（若自定义 base_url 则添加对应域名）。
    - 在 EA 输入框填入 `API Key`（`sk-...`），或复制
      `Files/OpenAIBot.ini.example` 为 `Files/OpenAIBot.ini` 并在里面填 key
      （推荐，避免 key 出现在 chart properties 里）。
-3. **编译运行**：MetaEditor 里 `F7` 编译 `OpenAIBot.mq5`（应无错误）；
+3. **编译运行**：MetaEditor 里 `F7` 编译 `OpenAIBot.mq5`（本包已用
+   MetaEditor64 真机验证：6 个文件全部 `0 errors, 0 warnings`）；
    先跑一遍 `Scripts/OpenAITest.mq5` 验证连通性；再把 EA 拖到图表上，
    输入框 `dry_run=true`（默认配置示例已设为 true）观察输出，确认无误后
    再开真实交易。
+
+> **部署验证**：`experts/` 与 `scripts/` 的 `.mq5` 均已通过
+> MetaTrader 5 自带 MetaEditor64 命令行编译（0 错误 0 警告），
+> 生成 `.ex5` 后可直接挂载到图表运行。
 
 ## JEV 决策版（OpenRouter / TypeSafe JEV）
 
@@ -163,6 +171,12 @@ chat/completions 端点**（报错 "is a decisions model"），所以此版本
   已按 decisions 协议实现。
 
 ## 版本历史
+- v1.11 2026-10-01：真机编译验证——webtop 容器内 MetaEditor64 编译
+  全部 6 个 `.mq5` 通过（0 errors, 0 warnings）；修复 MT4→MQL5 差异：
+  指标句柄化（iMA/iRSI/iMACD/iBands/iStochastic + CopyBuffer）、
+  `MqlTradeRequest` 改用 ZeroMemory、input 常量改为运行时配置变量、
+  include 改为 `<X.mqh>` 尖括号（头文件放 `MQL5\Include\` 根）、
+  `StringToUpper` 原地调用（void）。
 - v1.10 2026-09-30：新增 JEV 决策版（`JevClient.mqh` + `JevDecisionBot.mq5`
   + `JevTest.mq5` + 配置/文档），实测 OpenRouter decisions API 通过；
   `OpenAIClient` 增加可选历史修剪（`maxHistoryChars`）。

@@ -25,9 +25,9 @@
 #property version   "1.00"
 #property strict
 
-#include "..\include\OpenAIClient.mqh"
-#include "..\include\MT5Toolbox.mqh"
-#include "..\include\Config.mqh"
+#include <OpenAIClient.mqh>
+#include <MT5Toolbox.mqh>
+#include <Config.mqh>
 
 //--- inputs
 input string InpApiKey      = "";                     // OpenAI API key (sk-...)
@@ -40,6 +40,14 @@ input int    InpPollSeconds = 30;                     // poll interval (seconds)
 input string InpConfigFile  = "OpenAIBot.ini";        // config file (Files\\)
 input string InpSystemPromptFile = "system_prompt.txt"; // prompt file (Files\\)
 input int    InpMagic       = 20261030;               // EA magic number
+
+//--- runtime config (populated from inputs, overridable by ini)
+string g_apiKey   = "";
+string g_baseUrl  = "https://api.openai.com/v1";
+string g_model    = "gpt-4o-mini";
+int    g_maxTokens= 2000;
+int    g_pollSeconds = 30;
+int    g_magic    = 20261030;
 input double InpMaxLot      = 10.0;                   // max lot per order
 input int    InpMaxPositions= 5;                      // max open positions
 input double InpDailyLoss   = 1000.0;                 // daily loss limit (currency)
@@ -136,12 +144,20 @@ int OnInit(void)
    g_tb.SetLogFile(g_logFile);
    g_tb.SetConfirmFile(g_confirmFile);
 
+   // copy inputs into runtime config
+   g_apiKey=InpApiKey;
+   g_baseUrl=InpBaseUrl;
+   g_model=InpModel;
+   g_maxTokens=InpMaxTokens;
+   g_pollSeconds=InpPollSeconds;
+   g_magic=InpMagic;
+
    // config file may override
    LoadConfigAndPrompt();
 
    // tools JSON schema
    string tools=BuildToolsSchema();
-   g_openai.Setup(InpApiKey,InpBaseUrl,InpModel,InpTemperature,InpMaxTokens,
+   g_openai.Setup(g_apiKey,g_baseUrl,g_model,InpTemperature,g_maxTokens,
                   tools,InpMaxToolRounds);
 
    // preload symbol data so first poll is fast
@@ -150,9 +166,9 @@ int OnInit(void)
 
    EventSetTimer(1);
    g_state=AG_IDLE;
-   Print("OpenAIBot: initialized. Model=",InpModel," base=",InpBaseUrl,
-         " magic=",InpMagic," confirm=",InpConfirmMode," dry=",InpDryRun);
-   Print("OpenAIBot: whitelist URL required: ",InpBaseUrl);
+   Print("OpenAIBot: initialized. Model=",g_model," base=",g_baseUrl,
+         " magic=",g_magic," confirm=",InpConfirmMode," dry=",InpDryRun);
+   Print("OpenAIBot: whitelist URL required: ",g_baseUrl);
    return(INIT_SUCCEEDED);
   }
 
@@ -180,7 +196,7 @@ void OnTimer(void)
 
    // 2. countdown until next poll
    g_pollCounter++;
-   if(g_pollCounter<InpPollSeconds) return;
+   if(g_pollCounter<g_pollSeconds) return;
    g_pollCounter=0;
 
    // 3. run one full agent step (blocking HTTP + tool loop)
@@ -428,12 +444,12 @@ bool LoadConfigAndPrompt(void)
    if(g_cfg.Load(cfgPath))
      {
       if(g_cfg.Has("api_key") && g_cfg.GetString("api_key")!="")
-         InpApiKey=g_cfg.GetString("api_key");
-      if(g_cfg.Has("base_url"))    InpBaseUrl=g_cfg.GetString("base_url");
-      if(g_cfg.Has("model"))       InpModel=g_cfg.GetString("model");
-      if(g_cfg.Has("max_tokens"))  InpMaxTokens=g_cfg.GetInt("max_tokens");
-      if(g_cfg.Has("poll_seconds"))InpPollSeconds=g_cfg.GetInt("poll_seconds");
-      if(g_cfg.Has("magic"))       InpMagic=g_cfg.GetInt("magic");
+         g_apiKey=g_cfg.GetString("api_key");
+      if(g_cfg.Has("base_url"))    g_baseUrl=g_cfg.GetString("base_url");
+      if(g_cfg.Has("model"))       g_model=g_cfg.GetString("model");
+      if(g_cfg.Has("max_tokens"))  g_maxTokens=g_cfg.GetInt("max_tokens");
+      if(g_cfg.Has("poll_seconds"))g_pollSeconds=g_cfg.GetInt("poll_seconds");
+      if(g_cfg.Has("magic"))       g_magic=g_cfg.GetInt("magic");
       if(g_cfg.Has("max_lot"))     g_guard.maxLot=g_cfg.GetDouble("max_lot");
       if(g_cfg.Has("max_positions"))g_guard.maxPositions=g_cfg.GetInt("max_positions");
       if(g_cfg.Has("daily_loss"))  g_guard.dailyLossLimit=g_cfg.GetDouble("daily_loss");
@@ -523,7 +539,7 @@ void PanelRefresh(void)
       case AG_ANSWERED:s+="ANSWERED"; break;
       case AG_ERROR:   s+="ERROR"; break;
      }
-   s+="\nmodel: "+InpModel;
+   s+="\nmodel: "+g_model;
    s+="\nlast activity: "+(g_lastActivity>0?TimeStr(g_lastActivity):"-");
    s+="\npositions: "+IntegerToString(PositionsTotal());
    s+="\nequity: "+DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY),2);
