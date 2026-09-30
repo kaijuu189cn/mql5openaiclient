@@ -193,6 +193,25 @@ chat/completions 端点**（报错 "is a decisions model"），所以此版本
   已按 decisions 协议实现。
 
 ## 版本历史
+- v1.13 2026-10-01：**真机联调修复**（在 MT5 + 本地代理上跑通完整
+  工具循环，模型给出 XAUUSD 实盘分析，下单请求进入护栏）：
+  - `Json`：`a[0].b` 这种"对象成员 + 下标"路径原先不会进入数组元素，
+    导致 `choices[0].message.content` / `tool_calls` 全部读空（表现为
+    "空终答、工具从不执行"）。已修复 `Resolve`，并新增
+    `IsBalanced()` 在发送前校验请求体。
+  - `OpenAIClient`：加 `Connection: close`（复用被网关回收的
+    keep-alive 连接会产生空 body 的异常状态码，表现为 `HTTP 1003`）、
+    空响应体自动重试一次、超时 60s、`RawResponse()`、`DisableTools()`。
+  - `MT5Toolbox`：**符号自动解析**（`XAUUSD` → 经纪商实际 `XAUUSDm`，
+    兼容 m/.a/_i 等后缀）、`rates` 文本输出限量（原先一次回 100 根 K 线
+    会把上下文撑爆）、修正 `iBands` 参数顺序（deviation/shift 写反，
+    导致上中下轨相同）。
+  - EA：单条工具结果截断 3000 字符；修正 `SafePath` 双重前缀（outbox
+    被写到嵌套目录）；`OpenAIBot` 默认 `dry_run=true`；工具轮上限
+    6 → 8，并在触顶时关闭工具再问一次以强制产出总结。
+  - 环境：Wine 下 MT5 的"鼠标被隐形窗口吞掉"与 MT4 同因，已提供
+    `/config/start-mt5.sh` 与常驻守护 `mt5-inputfix.sh`（只做几何缩放，
+    绝不 unmap/kill）。
 - v1.12 2026-10-01：接入本地 OpenAI 兼容代理
   （`http://host.docker.internal:9936/v1`，key `100216`）；默认品种改
   `XAUUSD`；curl 实测代理的 chat/function calling/多轮工具循环通过。
