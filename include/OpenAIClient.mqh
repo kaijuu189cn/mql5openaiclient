@@ -288,6 +288,15 @@ bool COpenAIClient::SendRequest(void)
      }
    body+="}";
 
+   // fail fast on a malformed body (e.g. a hand-written tool schema with
+   // a missing brace) instead of letting the API return a cryptic 400
+   string jerr="";
+   if(!CJson::IsBalanced(body,jerr))
+     {
+      m_lastError="request body is not valid JSON: "+jerr;
+      return false;
+     }
+
    string headers="Authorization: Bearer "+m_apiKey+
                   "\r\nContent-Type: application/json";
 

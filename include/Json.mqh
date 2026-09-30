@@ -69,6 +69,9 @@ public:
    //--- static builders
    static string Escape(const string s);   // escape a string for JSON (no quotes)
    static string Quote(const string s);    // escape + surround with quotes
+   //--- structural sanity check: quotes escaped? braces/brackets balanced?
+   //    Catches hand-written schema bugs before they hit the network.
+   static bool   IsBalanced(const string s,string &err);
   };
 
 //+------------------------------------------------------------------+
@@ -534,6 +537,35 @@ string CJson::Escape(const string s)
 string CJson::Quote(const string s)
   {
    return "\""+Escape(s)+"\"";
+  }
+
+//--- Structural check:扫描 JSON 文本，忽略字符串内容（含转义），
+//    统计 {} 与 [] 是否配平。用于在发请求前发现手写 schema 的括号错误。
+bool CJson::IsBalanced(const string s,string &err)
+  {
+   err="";
+   int n=StringLen(s);
+   int depthObj=0,depthArr=0;
+   bool inStr=false;
+   for(int i=0;i<n;i++)
+     {
+      ushort c=StringGetCharacter(s,i);
+      if(inStr)
+        {
+         if(c=='\\') { i++; continue; }   // skip escaped char
+         if(c=='"')  inStr=false;
+         continue;
+        }
+      if(c=='"')            { inStr=true;  continue; }
+      if(c=='{')            { depthObj++;  continue; }
+      if(c=='}')            { depthObj--;  if(depthObj<0){ err=StringFormat("unexpected '}' at %d",i); return false; } continue; }
+      if(c=='[')            { depthArr++;  continue; }
+      if(c==']')            { depthArr--;  if(depthArr<0){ err=StringFormat("unexpected ']' at %d",i); return false; } continue; }
+     }
+   if(inStr)    { err="unterminated string";       return false; }
+   if(depthObj) { err=StringFormat("unbalanced {} (missing %d closing brace(s))",depthObj); return false; }
+   if(depthArr) { err=StringFormat("unbalanced [] (missing %d closing bracket(s))",depthArr); return false; }
+   return true;
   }
 
 #endif // MQL5_OPENAI_JSON_MQH
