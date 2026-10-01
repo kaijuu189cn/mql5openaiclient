@@ -54,9 +54,10 @@ CMT5Toolbox    g_tb;
 SGuardSettings g_guard;
 CConfig        g_cfg;
 
-string g_inboxFile="OpenAIBot\\inbox.txt";
-string g_outboxFile="OpenAIBot\\outbox.txt";
-string g_logFile="OpenAIBot\\log.txt";
+string g_symbol="";                                  // resolved symbol
+string g_inboxFile="OpenAIBot\\jev_inbox.txt";
+string g_outboxFile="OpenAIBot\\jev_outbox.txt";
+string g_logFile="OpenAIBot\\jev_log.txt";
 int    g_pollCounter=0;
 
 //--- panel
@@ -92,8 +93,9 @@ int OnInit(void)
 
    g_jev.Setup(InpApiKey,InpBaseUrl,InpModel);
 
-   if(SymbolInfoInteger(InpSymbol,SYMBOL_VISIBLE)==0)
-      SymbolSelect(InpSymbol,true);
+   g_symbol=g_tb.ResolveSymbol(InpSymbol);
+   if(SymbolInfoInteger(g_symbol,SYMBOL_VISIBLE)==0)
+      SymbolSelect(g_symbol,true);
 
    EventSetTimer(1);
    Print("JevDecisionBot: init model=",InpModel," conf>=",InpMinConf,
@@ -123,7 +125,7 @@ void OnTimer(void)
    g_pollCounter=0;
 
    // 1. candidate signal
-   string sym=InpSymbol; int dir=0; double lot=0.1;
+   string sym=g_symbol; int dir=0; double lot=0.1;
    string src="";
    if(InpSignalMode==1)
      {
@@ -248,7 +250,7 @@ bool ReadInboxSignal(string &sym,int &dir,double &lot)
 //+------------------------------------------------------------------+
 string DoLocalSignal(string &sym,int &dir,double &lot)
   {
-   sym=InpSymbol;
+   sym=g_symbol;
    // MQL5: indicator functions return handles; use CopyBuffer
    double rsi=0;
    int hRSI=iRSI(sym,PERIOD_H1,14,PRICE_CLOSE);
@@ -280,13 +282,13 @@ string BuildState(void)
   {
    string pos=g_tb.ToolOpenPositions("");
    if(StringLen(pos)>800) pos=StringSubstr(pos,0,800);
-   string bars=g_tb.ToolRates(InpSymbol,InpTimeframe,InpBarsCount);
+   string bars=g_tb.ToolRates(g_symbol,InpTimeframe,InpBarsCount);
    if(StringLen(bars)>1500) bars=StringSubstr(bars,0,1500);
-   string ind=g_tb.ToolIndicators(InpSymbol,InpTimeframe,30);
+   string ind=g_tb.ToolIndicators(g_symbol,InpTimeframe,30);
    if(StringLen(ind)>800) ind=StringSubstr(ind,0,800);
 
    string s="{";
-   s+="\"symbol\":"+CJson::Quote(InpSymbol);
+   s+="\"symbol\":"+CJson::Quote(g_symbol);
    s+=",\"timeframe\":"+CJson::Quote(InpTimeframe);
    s+=",\"account\":"+CJson::Quote(g_tb.ToolAccountInfo());
    s+=",\"positions\":"+CJson::Quote(pos);

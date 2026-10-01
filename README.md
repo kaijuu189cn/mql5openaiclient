@@ -193,6 +193,16 @@ chat/completions 端点**（报错 "is a decisions model"），所以此版本
   已按 decisions 协议实现。
 
 ## 版本历史
+- v1.14 2026-10-01：**JEV 在 MT5 内真机验证通过**（需把
+  `https://openrouter.ai` 加入 WebRequest 白名单）：
+  - `JevClient.mqh`：真实调用 2.1s 返回，choice/noul/score 三种答案
+    连同 `probabilities`、`confidence`、`legend` 全部解析正确。
+  - `JevDecisionBot.mq5`：读候选信号 → 构造 state → 问 JEV → 按
+    `min_conf/min_prob/noul` 阈值裁决，实测连续三轮输出
+    `JEV:hold prob=0.73 conf=0.59` 并正确判定 **HOLD（不开仓）**。
+  - 修复：JEV 版 EA 原先与 `OpenAIBot` **共用同一个 inbox/outbox/log
+    文件会互相覆盖**，改为独立 `jev_inbox/jev_outbox/jev_log.txt`；
+    并在初始化时做符号解析（`XAUUSD` → 经纪商实际 `XAUUSDm`）。
 - v1.13 2026-10-01：**真机联调修复**（在 MT5 + 本地代理上跑通完整
   工具循环，模型给出 XAUUSD 实盘分析，下单请求进入护栏）：
   - `Json`：`a[0].b` 这种"对象成员 + 下标"路径原先不会进入数组元素，
